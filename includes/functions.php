@@ -50,7 +50,7 @@ function ba_eas_do_auto_update() {
  * @uses ba_eas_update_nicename_cache() There’s always money in the banana stand!
  * @uses add_action() To re-add the 'ba_eas_auto_update_user_nicename_single' hook.
  *
- * @return int $user_id. False on failure
+ * @return bool|int $user_id. False on failure
  */
 function ba_eas_auto_update_user_nicename( $user_id, $bulk = false ) {
 
@@ -72,18 +72,12 @@ function ba_eas_auto_update_user_nicename( $user_id, $bulk = false ) {
 	$user = get_userdata( $user_id );
 
 	// Double check we're still good
-	if ( ! is_object( $user ) || empty( $user ) ) {
+	if ( ! is_object( $user ) || empty( $user ) || empty( $user->ID ) ) {
 		return false;
 	}
 
 	// Setup the user_id
-	if ( ! empty( $user->ID ) ) {
-		$user_id  = (int) $user->ID;
-
-	// No user_id so bail
-	} else {
-		return false;
-	}
+	$user_id = (int) $user->ID;
 
 	// Get the default nicename structure
 	$structure = apply_filters( 'ba_eas_auto_update_user_nicename_structure', ba_eas()->default_user_nicename, $user_id );
@@ -94,10 +88,9 @@ function ba_eas_auto_update_user_nicename( $user_id, $bulk = false ) {
 	}
 
 	// Setup the current nicename
-	if ( empty( $user->user_nicename ) ) {
+	$current_nicename = $user->user_login;
+	if ( ! empty( $user->user_nicename ) ) {
 		$current_nicename = $user->user_nicename;
-	} else {
-		$current_nicename = $user->user_login;
 	}
 
 	// Setup default nicename
@@ -167,7 +160,7 @@ function ba_eas_auto_update_user_nicename( $user_id, $bulk = false ) {
 	$nicename = apply_filters( 'ba_eas_pre_auto_update_user_nicename', sanitize_title( $nicename ), $user_id, $structure );
 
 	// Bail if nothing changed
-	if ( $nicename == $current_nicename ) {
+	if ( $nicename === $current_nicename ) {
 		return $user_id;
 	}
 
@@ -204,9 +197,11 @@ function ba_eas_auto_update_user_nicename( $user_id, $bulk = false ) {
  * @param int $user_id User id
  *
  * @uses ba_eas_auto_update_user_nicename() To auto-update the nicename.
+ *
+ * @return bool|int $user_id. False on failure
  */
 function ba_eas_auto_update_user_nicename_single( $user_id = 0 ) {
-	ba_eas_auto_update_user_nicename( $user_id );
+	return ba_eas_auto_update_user_nicename( $user_id );
 }
 
 /**
@@ -219,9 +214,11 @@ function ba_eas_auto_update_user_nicename_single( $user_id = 0 ) {
  * @param int $user_id User id
  *
  * @uses ba_eas_auto_update_user_nicename() To auto-update the nicename.
+ *
+ * @return bool|int $user_id. False on failure
  */
 function ba_eas_auto_update_user_nicename_bulk( $user_id = 0 ) {
-	ba_eas_auto_update_user_nicename( $user_id, true );
+	return ba_eas_auto_update_user_nicename( $user_id, true );
 }
 
 /** Author Base ***************************************************************/
@@ -252,7 +249,6 @@ function ba_eas_do_role_based_author_base() {
  *
  * @param string $link
  * @param int $user_id
- * @param string $nicename
  *
  * @uses ba_eas_do_role_based_author_base() To determine if we're doing role-based author bases.
  * @uses get_userdata() WP_User object
@@ -260,7 +256,7 @@ function ba_eas_do_role_based_author_base() {
  *
  * @return string Author archive link
  */
-function ba_eas_author_link( $link = '', $user_id = 0, $nicename = '' ) {
+function ba_eas_author_link( $link = '', $user_id = 0 ) {
 
 	// Add a role slug if we're doing role based author bases
 	if ( ba_eas_do_role_based_author_base() && false !== strpos( $link, '%ba_eas_author_role%' ) ) {
@@ -323,25 +319,37 @@ function ba_eas_template_include( $template ) {
 	// If they don't exist, search for a role based template
 	if ( false === $nicename_template && false === $id_template ) {
 
+		// Defaults
+		$role = $role_slug = false;
+
 		// Grab the first listed role
 		if ( ! empty( $author->roles ) && is_array( $author->roles ) ) {
 			$role = array_shift( $author->roles );
 		}
 
 		// Get the role slug
-		$role_slug = ba_eas()->role_slugs[ $role ]['slug'];
+		if ( ! empty( ba_eas()->role_slugs[ $role ]['slug'] ) ) {
+			$role_slug = ba_eas()->role_slugs[ $role ]['slug'];
+		}
 
 		// Set the templates array
-		$templates = array(
-			( empty( $role )      ) ? false : "author-{$role}.php",
-			( empty( $role_slug ) ) ? false : "author-{$role_slug}.php",
-		);
+		$templates = array();
+
+		// Add the role template
+		if ( ! empty( $role ) ) {
+			$templates[] = "author-{$role}.php";
+		}
+
+		// Add the role_slug template
+		if ( ! empty( $role_slug ) ) {
+			$templates[] = "author-{$role_slug}.php";
+		}
 
 		// Check for the template
 		$new_template = locate_template( $templates );
 
 		// If we have a role-based template, let's set it to be loaded
-		if ( '' != $new_template ) {
+		if ( '' !== $new_template ) {
 			$template = $new_template;
 		}
 	}
@@ -364,11 +372,11 @@ function ba_eas_flush_rewrite_rules() {
 	delete_option( 'rewrite_rules' );
 }
 
-/*
+/**
  * Filter out unnecessary rewrite rules from the author
  * rules array.
  *
- * @param array Author rewrite rules
+ * @param array $author_rewrite_rules Author rewrite rules
  *
  * @uses ba_eas_do_role_based_author_base() To determine if we're doing role-based author bases.
  *
@@ -403,10 +411,10 @@ function ba_eas_author_rewrite_rules( $author_rewrite_rules ) {
  *
  * @since 1.0.0
  *
- * @global object $wp_roles WP_Roles object
+ * @global WP_Roles $wp_roles The WP_Roles object.
  * @uses sanitize_title() To sanitize the role slug
  *
- * @return array WP_Roles::roles object
+ * @return array $editable_roles List of editable roles.
  */
 function ba_eas_get_editable_roles() {
 	global $wp_roles;
@@ -421,7 +429,7 @@ function ba_eas_get_editable_roles() {
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param array WP_Roles::roles List of roles.
+	 * @param array WP_Roles::roles Array of WP_Roles::roles.
 	 */
 	$editable_roles = apply_filters( 'editable_roles', $wp_roles->roles );
 
@@ -457,16 +465,19 @@ function ba_eas_get_default_role_slugs() {
 	return $roles;
 }
 
-/**
- * Add array_replace_recursive() for users of PHP 5.2.x
- *
- * http://php.net/manual/en/function.array-replace-recursive.php#109390
- *
- * @since 1.0.2
- *
- * @return array Role slugs array
- */
 if ( ! function_exists( 'array_replace_recursive' ) ) {
+	/**
+	 * Add array_replace_recursive() for users of PHP 5.2.x
+	 *
+	 * http://php.net/manual/en/function.array-replace-recursive.php#109390
+	 *
+	 * @since 1.0.2
+	 *
+	 * @param array $base
+	 * @param array $replacements
+	 *
+	 * @return array Role slugs array
+	 */
 	function array_replace_recursive( $base, $replacements ) {
 		foreach ( array_slice( func_get_args(), 1 ) as $replacements ) {
 			$bref_stack = array( &$base );

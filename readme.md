@@ -2,8 +2,8 @@
 **Contributors:** thebrandonallen  
 **Tags:** author, author base, author slug, user nicename, nicename, permalink, permalinks, slug, users, user, role, roles  
 **Requires at least:** 3.6.1  
-**Tested up to:** 4.0  
-**Stable tag:** 1.0.3
+**Tested up to:** 4.2  
+**Stable tag:** 1.0.4
 
 Allows an admin (or capable user) to edit the author slug of a user, and change the author base.
 
@@ -20,6 +20,8 @@ http://example.com/ninja/master-ninja/
 or using a role-based author base  
 http://example.com/ida/master-splinter/ (for an Administrator Role)  
 http://example.com/koga/leonardo/ (for a Subscriber Role)
+
+Development of this plugin takes place on [GitHub](https://github.com/thebrandonallen/edit-author-slug/ "Edit Author Slug on Github"). Pull requests are always welcome!
 
 #### Translations Available
 * Dutch - props Juliette Reinders Folmer
@@ -49,8 +51,14 @@ If this doesn't work, make sure you don't have any slug conflicts from other pos
 
 ## Changelog
 
+#### 1.0.4
+* Improve upgrade routine for older installs
+* Improve output escaping
+* Various minor fixes and improvements
+
 #### 1.0.3
 I swear I tested this! :(
+
 * Fix custom roles slugs not saving
 
 #### 1.0.2
